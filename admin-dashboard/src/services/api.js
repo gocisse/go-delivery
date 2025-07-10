@@ -1,8 +1,11 @@
 import axios from 'axios';
 
+// Use direct backend URL instead of relying on proxy
+const BACKEND_URL = 'http://144.21.63.195:3001';
+
 // Create axios instance with base configuration
 export const api = axios.create({
-  baseURL: '',
+  baseURL: BACKEND_URL,
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
@@ -23,7 +26,7 @@ api.interceptors.request.use(
     
     console.log('API Request:', {
       method: config.method?.toUpperCase(),
-      url: config.url,
+      url: `${BACKEND_URL}${config.url}`,
       headers: config.headers,
       hasToken: !!token
     });
@@ -52,7 +55,8 @@ api.interceptors.response.use(
       data: error.response?.data,
       url: error.config?.url,
       method: error.config?.method,
-      headers: error.config?.headers
+      headers: error.config?.headers,
+      message: error.message
     });
 
     // Handle authentication errors
@@ -74,6 +78,8 @@ export const apiService = {
   
   // Authentication - simulate login since backend uses dev auth
   login: async (email, password) => {
+    console.log('Starting login process...');
+    
     // Validate credentials locally first
     if (email !== 'admin@goexpress.com' || password !== 'admin123') {
       throw new Error('Invalid credentials');
@@ -81,9 +87,21 @@ export const apiService = {
     
     // Test backend connectivity with a simple request
     try {
-      await api.get('/health');
+      console.log('Testing backend connectivity...');
+      const healthResponse = await api.get('/health');
+      console.log('Backend health check successful:', healthResponse.data);
     } catch (error) {
-      throw new Error('Cannot connect to backend server');
+      console.error('Backend connectivity test failed:', error);
+      
+      if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
+        throw new Error('Cannot connect to backend server - server may be down');
+      } else if (error.code === 'ECONNABORTED') {
+        throw new Error('Connection timeout - backend server not responding');
+      } else if (error.response?.status >= 500) {
+        throw new Error('Backend server error - please try again later');
+      } else {
+        throw new Error(`Backend connection failed: ${error.message}`);
+      }
     }
     
     // Generate a mock JWT token (backend doesn't validate it due to dev middleware)
@@ -94,6 +112,8 @@ export const apiService = {
       iat: Math.floor(Date.now() / 1000),
       exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
     }));
+    
+    console.log('Login successful, token generated');
     
     return {
       token: mockToken,
@@ -109,25 +129,33 @@ export const apiService = {
   // Dashboard
   getDashboardStats: async () => {
     try {
+      console.log('Fetching dashboard stats...');
       return await api.get('/api/staff/dashboard/stats');
     } catch (error) {
-      console.warn('Dashboard stats failed, trying health check:', error);
-      // If dashboard stats fail, try a simpler endpoint
-      await api.get('/health');
-      // Return mock data if health check passes but stats fail
-      return {
-        data: {
-          statistics: {
-            total_orders: 0,
-            pending_orders: 0,
-            active_drivers: 0,
-            total_customers: 0,
-            recent_orders_24h: 0
-          },
-          orders_by_status: {},
-          generated_at: new Date().toISOString()
-        }
-      };
+      console.warn('Dashboard stats failed:', error);
+      
+      // If dashboard stats fail, try a simpler endpoint first
+      try {
+        await api.get('/health');
+        console.log('Health check passed, returning mock data');
+        // Return mock data if health check passes but stats fail
+        return {
+          data: {
+            statistics: {
+              total_orders: 0,
+              pending_orders: 0,
+              active_drivers: 0,
+              total_customers: 0,
+              recent_orders_24h: 0
+            },
+            orders_by_status: {},
+            generated_at: new Date().toISOString()
+          }
+        };
+      } catch (healthError) {
+        console.error('Health check also failed:', healthError);
+        throw error; // Re-throw original error
+      }
     }
   },
   
