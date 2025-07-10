@@ -7,18 +7,35 @@ import {
   ClockIcon,
   TruckIcon,
   UserGroupIcon,
-  CalendarDaysIcon
+  CalendarDaysIcon,
+  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 
 const Dashboard = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [connectionStatus, setConnectionStatus] = useState('checking');
   const { t } = useLanguage();
 
   useEffect(() => {
-    fetchDashboardStats();
+    checkConnection();
   }, []);
+
+  const checkConnection = async () => {
+    try {
+      setConnectionStatus('checking');
+      // First check if backend is reachable
+      await apiService.healthCheck();
+      setConnectionStatus('connected');
+      fetchDashboardStats();
+    } catch (err) {
+      console.error('Connection check failed:', err);
+      setConnectionStatus('disconnected');
+      setError('Cannot connect to backend server');
+      setLoading(false);
+    }
+  };
 
   const fetchDashboardStats = async () => {
     try {
@@ -28,28 +45,46 @@ const Dashboard = () => {
       setError(null);
     } catch (err) {
       console.error('Failed to fetch dashboard stats:', err);
-      setError(err.message);
+      setError(err.response?.data?.message || err.message);
+      // Set default stats if API fails
+      setStats({
+        statistics: {
+          total_orders: 0,
+          pending_orders: 0,
+          active_drivers: 0,
+          total_customers: 0,
+          recent_orders_24h: 0
+        },
+        orders_by_status: {},
+        generated_at: new Date().toISOString()
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
-    return <LoadingSpinner size="lg" text={t('loading')} />;
+  if (connectionStatus === 'checking') {
+    return <LoadingSpinner size="lg" text="Connecting to backend..." />;
   }
 
-  if (error) {
+  if (connectionStatus === 'disconnected') {
     return (
       <div className="text-center py-12">
-        <p className="text-red-600 mb-4">{t('error')}: {error}</p>
+        <ExclamationTriangleIcon className="mx-auto h-12 w-12 text-red-500 mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Backend Connection Failed</h3>
+        <p className="text-gray-600 mb-4">Cannot connect to http://144.21.63.195:3001</p>
         <button
-          onClick={fetchDashboardStats}
+          onClick={checkConnection}
           className="btn-primary"
         >
-          {t('refresh')}
+          Retry Connection
         </button>
       </div>
     );
+  }
+
+  if (loading && !stats) {
+    return <LoadingSpinner size="lg" text={t('loading')} />;
   }
 
   const statCards = [
@@ -94,13 +129,34 @@ const Dashboard = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">{t('dashboard')}</h1>
-        <button
-          onClick={fetchDashboardStats}
-          className="btn-secondary"
-        >
-          {t('refresh')}
-        </button>
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <div className={`w-2 h-2 rounded-full ${connectionStatus === 'connected' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+            <span className="text-sm text-gray-600">
+              {connectionStatus === 'connected' ? 'Connected' : 'Disconnected'}
+            </span>
+          </div>
+          <button
+            onClick={fetchDashboardStats}
+            className="btn-secondary"
+            disabled={loading}
+          >
+            {t('refresh')}
+          </button>
+        </div>
       </div>
+
+      {error && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <p className="text-yellow-800">
+            <ExclamationTriangleIcon className="inline h-4 w-4 mr-1" />
+            {t('error')}: {error}
+          </p>
+          <p className="text-sm text-yellow-700 mt-1">
+            Showing default values. Check backend connection.
+          </p>
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
@@ -120,7 +176,7 @@ const Dashboard = () => {
       </div>
 
       {/* Orders by Status */}
-      {stats?.orders_by_status && (
+      {stats?.orders_by_status && Object.keys(stats.orders_by_status).length > 0 && (
         <div className="card">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Orders by Status</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -134,12 +190,17 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Last Updated */}
-      {stats?.generated_at && (
-        <div className="text-center text-sm text-gray-500">
-          Last updated: {new Date(stats.generated_at).toLocaleString()}
+      {/* API Info */}
+      <div className="card bg-gray-50">
+        <h3 className="text-sm font-medium text-gray-700 mb-2">API Information</h3>
+        <div className="text-xs text-gray-600 space-y-1">
+          <p>Backend URL: http://144.21.63.195:3001</p>
+          <p>Auth Mode: Development (bypassed)</p>
+          {stats?.generated_at && (
+            <p>Last updated: {new Date(stats.generated_at).toLocaleString()}</p>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };
