@@ -8,7 +8,8 @@ import {
   TruckIcon,
   UserGroupIcon,
   CalendarDaysIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  CheckCircleIcon
 } from '@heroicons/react/24/outline';
 
 const Dashboard = () => {
@@ -16,23 +17,42 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState('checking');
+  const [authStatus, setAuthStatus] = useState('checking');
   const { t } = useLanguage();
 
   useEffect(() => {
-    checkConnection();
+    checkConnectionAndAuth();
   }, []);
 
-  const checkConnection = async () => {
+  const checkConnectionAndAuth = async () => {
     try {
       setConnectionStatus('checking');
+      setAuthStatus('checking');
+      
+      console.log('Checking backend connection and auth...');
+      
       // First check if backend is reachable
       await apiService.healthCheck();
       setConnectionStatus('connected');
-      fetchDashboardStats();
-    } catch (err) {
-      console.error('Connection check failed:', err);
+      console.log('Backend connection successful');
+      
+      // Then test authenticated endpoint
+      try {
+        await apiService.getDashboardStats();
+        setAuthStatus('authenticated');
+        console.log('Authentication successful');
+        fetchDashboardStats();
+      } catch (authError) {
+        console.error('Authentication failed:', authError);
+        setAuthStatus('failed');
+        setError(`Authentication failed: ${authError.response?.status} ${authError.response?.statusText}`);
+        setLoading(false);
+      }
+    } catch (connError) {
+      console.error('Connection check failed:', connError);
       setConnectionStatus('disconnected');
-      setError('Cannot connect to backend server');
+      setAuthStatus('unknown');
+      setError('Cannot connect to backend server at http://144.21.63.195:3001');
       setLoading(false);
     }
   };
@@ -40,12 +60,17 @@ const Dashboard = () => {
   const fetchDashboardStats = async () => {
     try {
       setLoading(true);
+      console.log('Fetching dashboard stats...');
+      
       const response = await apiService.getDashboardStats();
+      console.log('Dashboard stats response:', response.data);
+      
       setStats(response.data);
       setError(null);
     } catch (err) {
       console.error('Failed to fetch dashboard stats:', err);
-      setError(err.response?.data?.message || err.message);
+      setError(`API Error: ${err.response?.status} - ${err.response?.data?.message || err.message}`);
+      
       // Set default stats if API fails
       setStats({
         statistics: {
@@ -63,8 +88,8 @@ const Dashboard = () => {
     }
   };
 
-  if (connectionStatus === 'checking') {
-    return <LoadingSpinner size="lg" text="Connecting to backend..." />;
+  if (connectionStatus === 'checking' || authStatus === 'checking') {
+    return <LoadingSpinner size="lg" text="Connecting to backend and verifying authentication..." />;
   }
 
   if (connectionStatus === 'disconnected') {
@@ -74,11 +99,42 @@ const Dashboard = () => {
         <h3 className="text-lg font-medium text-gray-900 mb-2">Backend Connection Failed</h3>
         <p className="text-gray-600 mb-4">Cannot connect to http://144.21.63.195:3001</p>
         <button
-          onClick={checkConnection}
+          onClick={checkConnectionAndAuth}
           className="btn-primary"
         >
           Retry Connection
         </button>
+      </div>
+    );
+  }
+
+  if (authStatus === 'failed') {
+    return (
+      <div className="text-center py-12">
+        <ExclamationTriangleIcon className="mx-auto h-12 w-12 text-yellow-500 mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Authentication Failed</h3>
+        <p className="text-gray-600 mb-4">
+          Backend is reachable but authentication failed. This might be due to:
+        </p>
+        <ul className="text-sm text-gray-600 mb-4 text-left max-w-md mx-auto">
+          <li>• Missing or invalid Authorization header</li>
+          <li>• Backend authentication middleware issues</li>
+          <li>• CORS configuration problems</li>
+        </ul>
+        <div className="space-x-4">
+          <button
+            onClick={checkConnectionAndAuth}
+            className="btn-primary"
+          >
+            Retry Authentication
+          </button>
+          <button
+            onClick={() => window.location.href = '/admin/login'}
+            className="btn-secondary"
+          >
+            Re-login
+          </button>
+        </div>
       </div>
     );
   }
@@ -131,10 +187,8 @@ const Dashboard = () => {
         <h1 className="text-2xl font-bold text-gray-900">{t('dashboard')}</h1>
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
-            <div className={`w-2 h-2 rounded-full ${connectionStatus === 'connected' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-            <span className="text-sm text-gray-600">
-              {connectionStatus === 'connected' ? 'Connected' : 'Disconnected'}
-            </span>
+            <CheckCircleIcon className="w-4 h-4 text-green-500" />
+            <span className="text-sm text-gray-600">Connected & Authenticated</span>
           </div>
           <button
             onClick={fetchDashboardStats}
@@ -153,7 +207,7 @@ const Dashboard = () => {
             {t('error')}: {error}
           </p>
           <p className="text-sm text-yellow-700 mt-1">
-            Showing default values. Check backend connection.
+            Showing default values. Check backend logs for details.
           </p>
         </div>
       )}
@@ -190,12 +244,14 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* API Info */}
+      {/* Debug Info */}
       <div className="card bg-gray-50">
-        <h3 className="text-sm font-medium text-gray-700 mb-2">API Information</h3>
+        <h3 className="text-sm font-medium text-gray-700 mb-2">Debug Information</h3>
         <div className="text-xs text-gray-600 space-y-1">
           <p>Backend URL: http://144.21.63.195:3001</p>
-          <p>Auth Mode: Development (bypassed)</p>
+          <p>Connection Status: {connectionStatus}</p>
+          <p>Auth Status: {authStatus}</p>
+          <p>Token Present: {!!localStorage.getItem('token')}</p>
           {stats?.generated_at && (
             <p>Last updated: {new Date(stats.generated_at).toLocaleString()}</p>
           )}

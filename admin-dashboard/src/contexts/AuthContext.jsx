@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { api } from '../services/api';
+import { apiService } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -18,36 +18,33 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     if (token) {
-      // Set token in API headers
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      
-      // Verify token validity by checking user profile
-      checkAuth();
+      // Verify token validity by testing API access
+      verifyToken();
     } else {
       setLoading(false);
     }
   }, [token]);
 
-  const checkAuth = async () => {
+  const verifyToken = async () => {
     try {
-      // Try to get dashboard stats to verify auth
-      // Your backend uses dev auth middleware, so any request should work
-      const response = await api.get('/api/staff/dashboard/stats');
+      console.log('Verifying token...');
       
-      // If successful, set a mock user (since we don't have a user endpoint)
-      setUser({
-        id: 'admin-user',
-        email: 'admin@goexpress.com',
-        role: 'admin',
-        name: 'Admin User'
-      });
-    } catch (error) {
-      console.error('Auth check failed:', error);
-      // Don't logout on 403 during initial check - backend might not be ready
-      if (error.response?.status !== 403) {
-        logout();
-      } else {
-        // For 403, still set user since backend uses dev auth
+      // Test API access with current token
+      await apiService.healthCheck();
+      
+      // If health check passes, decode the mock token to get user info
+      try {
+        const decoded = JSON.parse(atob(token));
+        setUser({
+          id: decoded.sub,
+          email: decoded.email,
+          role: decoded.role,
+          name: 'Admin User'
+        });
+        console.log('Token verified successfully');
+      } catch (decodeError) {
+        console.error('Failed to decode token:', decodeError);
+        // Set default user if token decode fails but API works
         setUser({
           id: 'admin-user',
           email: 'admin@goexpress.com',
@@ -55,6 +52,10 @@ export const AuthProvider = ({ children }) => {
           name: 'Admin User'
         });
       }
+    } catch (error) {
+      console.error('Token verification failed:', error);
+      // Clear invalid token
+      logout();
     } finally {
       setLoading(false);
     }
@@ -62,35 +63,18 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      // Since your backend doesn't have a login endpoint and uses dev auth middleware,
-      // we'll validate credentials locally and then test API access
-      if (email === 'admin@goexpress.com' && password === 'admin123') {
-        // Generate a mock token (your backend doesn't validate it anyway due to dev middleware)
-        const mockToken = 'dev-admin-token-' + Date.now();
-        
-        localStorage.setItem('token', mockToken);
-        setToken(mockToken);
-        api.defaults.headers.common['Authorization'] = `Bearer ${mockToken}`;
-        
-        // Test API access to ensure backend is reachable
-        try {
-          await api.get('/health');
-        } catch (healthError) {
-          console.warn('Health check failed, but continuing with login:', healthError);
-        }
-        
-        const mockUser = {
-          id: 'admin-user',
-          email: 'admin@goexpress.com',
-          role: 'admin',
-          name: 'Admin User'
-        };
-        
-        setUser(mockUser);
-        return { success: true, user: mockUser };
-      } else {
-        throw new Error('Invalid credentials');
-      }
+      console.log('Attempting login with:', { email, password: '***' });
+      
+      const response = await apiService.login(email, password);
+      
+      console.log('Login successful:', response);
+      
+      // Store token and set user
+      localStorage.setItem('token', response.token);
+      setToken(response.token);
+      setUser(response.user);
+      
+      return { success: true, user: response.user };
     } catch (error) {
       console.error('Login failed:', error);
       return { success: false, error: error.message };
@@ -98,10 +82,10 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    console.log('Logging out...');
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
-    delete api.defaults.headers.common['Authorization'];
   };
 
   const value = {
@@ -109,7 +93,7 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     loading,
-    isAuthenticated: !!user
+    isAuthenticated: !!user && !!token
   };
 
   return (
