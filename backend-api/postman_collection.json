@@ -1,0 +1,502 @@
+{
+  "info": {
+    "name": "GOExpress-BF API",
+    "description": "Complete API collection for GOExpress-BF delivery management system",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{auth_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3001/api",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/../health",
+          "host": ["{{base_url}}"],
+          "path": ["..", "health"]
+        }
+      }
+    },
+    {
+      "name": "Tracking",
+      "item": [
+        {
+          "name": "Get Package Tracking",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tracking/{{order_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["tracking", "{{order_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Driver Location",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"order_id\": \"{{order_id}}\",\n  \"latitude\": 40.7128,\n  \"longitude\": -74.0060\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/tracking/update",
+              "host": ["{{base_url}}"],
+              "path": ["tracking", "update"]
+            }
+          }
+        },
+        {
+          "name": "Batch Location Update",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"updates\": [\n    {\n      \"order_id\": \"{{order_id}}\",\n      \"latitude\": 40.7128,\n      \"longitude\": -74.0060,\n      \"timestamp\": \"2024-01-01T12:00:00Z\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/tracking/batch-update",
+              "host": ["{{base_url}}"],
+              "path": ["tracking", "batch-update"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Drivers",
+      "item": [
+        {
+          "name": "Create Driver",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"phone\": \"+1234567890\",\n  \"vehicle_type\": \"motorcycle\",\n  \"license_number\": \"DL123456789\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/drivers",
+              "host": ["{{base_url}}"],
+              "path": ["drivers"]
+            }
+          }
+        },
+        {
+          "name": "Get Driver Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/drivers/{{driver_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["drivers", "{{driver_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Driver Status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/drivers/{{driver_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["drivers", "{{driver_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Available Drivers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/drivers/available?vehicle_type=motorcycle",
+              "host": ["{{base_url}}"],
+              "path": ["drivers", "available"],
+              "query": [
+                {
+                  "key": "vehicle_type",
+                  "value": "motorcycle"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List All Drivers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/drivers?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["drivers"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Customers",
+      "item": [
+        {
+          "name": "Register Customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jane Smith\",\n  \"email\": \"jane.smith@example.com\",\n  \"phone\": \"+1234567891\",\n  \"address\": \"123 Main St, New York, NY 10001\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/customers",
+              "host": ["{{base_url}}"],
+              "path": ["customers"]
+            }
+          }
+        },
+        {
+          "name": "Get Customer Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/customers/{{customer_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["customers", "{{customer_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Customer Info",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jane Smith Updated\",\n  \"phone\": \"+1234567892\",\n  \"address\": \"456 Oak St, New York, NY 10002\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/customers/{{customer_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["customers", "{{customer_id}}"]
+            }
+          }
+        },
+        {
+          "name": "List All Customers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/customers?search=jane&page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["customers"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "jane"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Create Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": \"{{customer_id}}\",\n  \"pickup_address\": \"123 Main St, New York, NY 10001\",\n  \"delivery_address\": \"456 Oak St, New York, NY 10002\",\n  \"package_description\": \"Electronics package\",\n  \"delivery_instructions\": \"Ring doorbell twice\",\n  \"priority\": \"normal\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/orders",
+              "host": ["{{base_url}}"],
+              "path": ["orders"]
+            }
+          }
+        },
+        {
+          "name": "Update Order Status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"picked_up\",\n  \"notes\": \"Package picked up successfully\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/{{order_id}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "{{order_id}}", "status"]
+            }
+          }
+        },
+        {
+          "name": "Get Pending Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/orders/pending",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "pending"]
+            }
+          }
+        },
+        {
+          "name": "Assign Order to Driver",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"driver_id\": \"{{driver_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/{{order_id}}/assign",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "{{order_id}}", "assign"]
+            }
+          }
+        },
+        {
+          "name": "List Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/orders?status=pending&page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["orders"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "pending"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Order Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/orders/{{order_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "{{order_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Staff",
+      "item": [
+        {
+          "name": "Create Staff Member",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Admin User\",\n  \"email\": \"admin@goexpress.com\",\n  \"phone\": \"+1234567893\",\n  \"role\": \"admin\",\n  \"department\": \"Operations\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/staff",
+              "host": ["{{base_url}}"],
+              "path": ["staff"]
+            }
+          }
+        },
+        {
+          "name": "List Staff Members",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/staff?role=admin&page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["staff"],
+              "query": [
+                {
+                  "key": "role",
+                  "value": "admin"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Staff Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/staff/{{staff_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["staff", "{{staff_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Staff Member",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Admin User\",\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/staff/{{staff_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["staff", "{{staff_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Dashboard Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/staff/dashboard/stats",
+              "host": ["{{base_url}}"],
+              "path": ["staff", "dashboard", "stats"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

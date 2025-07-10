@@ -1,0 +1,47 @@
+{
+  "name": "goexpress-bf-backend",
+  "version": "1.0.0",
+  "description": "Production-ready Node.js backend for GOExpress-BF delivery management system",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "migrate": "node scripts/run-migrations.js",
+    "migrate:bash": "chmod +x scripts/migrate.sh && ./scripts/migrate.sh",
+    "db:reset": "node scripts/reset-database.js",
+    "db:check": "node scripts/check-database.js",
+    "supabase:status": "supabase status",
+    "supabase:link": "supabase link",
+    "supabase:push": "supabase db push",
+    "supabase:pull": "supabase db pull",
+    "logs": "tail -f logs/backend.log"
+  },
+  "keywords": ["delivery", "logistics", "express", "supabase", "nodejs"],
+  "author": "GOExpress-BF Team",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.55.0",
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.2",
+    "supertest": "^6.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}

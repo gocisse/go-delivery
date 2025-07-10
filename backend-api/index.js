@@ -1,0 +1,124 @@
+require('dotenv').config();
+console.log("SUPABASE_URL", process.env.SUPABASE_URL);
+console.log("SUPABASE_SERVICE_ROLE_KEY", process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+
+
+const express = require("express")
+const cors = require("cors")
+const rateLimit = require("express-rate-limit")
+const helmet = require("helmet")
+const morgan = require("morgan")
+const logger = require("./lib/logger")
+
+// Import routes
+const trackingRoutes = require("./routes/tracking")
+const driversRoutes = require("./routes/drivers")
+const customersRoutes = require("./routes/customers")
+const ordersRoutes = require("./routes/orders")
+const staffRoutes = require("./routes/staff")
+
+const app = express()
+const PORT = process.env.PORT || 3001
+
+// Security middleware
+app.use(helmet())
+
+// CORS configuration - restrict to frontend domain only
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  }),
+)
+
+// Rate limiting - 100 requests per minute per IP
+const limiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 100,
+  message: {
+    code: "RATE_LIMIT_EXCEEDED",
+    message: "Too many requests from this IP, please try again later",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+})
+app.use(limiter)
+
+// Body parsing middleware
+app.use(express.json({ limit: "10mb" }))
+app.use(express.urlencoded({ extended: true }))
+
+// Logging middleware
+app.use(
+  morgan("combined", {
+    stream: {
+      write: (message) => logger.info(message.trim()),
+    },
+  }),
+)
+
+// Health check endpoint
+app.get("/health", (req, res) => {
+  res.json({
+    status: "OK",
+    timestamp: new Date().toISOString(),
+    service: "GOExpress-BF Backend",
+  })
+})
+
+// API routes
+app.use("/api/tracking", trackingRoutes)
+app.use("/api/drivers", driversRoutes)
+app.use("/api/customers", customersRoutes)
+app.use("/api/orders", ordersRoutes)
+app.use("/api/staff", staffRoutes)
+
+// Global error handler
+app.use((err, req, res, next) => {
+  logger.error("Unhandled error:", {
+    error: err.message,
+    stack: err.stack,
+    url: req.url,
+    method: req.method,
+    ip: req.ip,
+    userAgent: req.get("User-Agent"),
+  })
+
+  // Don't leak error details in production
+  const isDevelopment = process.env.NODE_ENV === "development"
+
+  res.status(err.status || 500).json({
+    code: err.code || "INTERNAL_SERVER_ERROR",
+    message: isDevelopment ? err.message : "An internal server error occurred",
+    ...(isDevelopment && { stack: err.stack }),
+  })
+})
+
+// 404 handler
+app.use("*", (req, res) => {
+  res.status(404).json({
+    code: "ENDPOINT_NOT_FOUND",
+    message: `Endpoint ${req.method} ${req.originalUrl} not found`,
+  })
+})
+
+// Graceful shutdown
+process.on("SIGTERM", () => {
+  logger.info("SIGTERM received, shutting down gracefully")
+  process.exit(0)
+})
+
+process.on("SIGINT", () => {
+  logger.info("SIGINT received, shutting down gracefully")
+  process.exit(0)
+})
+
+app.listen(PORT, () => {
+  logger.info(`GOExpress-BF Backend running on port ${PORT}`)
+  logger.info(`Environment: ${process.env.NODE_ENV || "development"}`)
+})
+
+module.exports = app
