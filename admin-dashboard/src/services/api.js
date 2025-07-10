@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Use direct backend URL instead of relying on proxy
-const BACKEND_URL = 'http://144.21.63.195:3001';
+const BACKEND_URL = 'http://localhost:3001';
 
 // Create axios instance with base configuration
 export const api = axios.create({
